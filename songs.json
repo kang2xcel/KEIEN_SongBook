@@ -1,0 +1,5 @@
+[
+  { "title": "사랑은 늘 도망가", "artist": "임영웅", "genre": "발라드", "recommended": true, "url": "https://www.youtube.com/watch?v=" },
+  { "title": "Ditto", "artist": "NewJeans", "genre": "댄스", "recommended": false, "url": "https://www.youtube.com/watch?v=" },
+  { "title": "NIGHT DANCER", "artist": "imase", "genre": "일본", "recommended": true, "url": "https://www.youtube.com/watch?v=" }
+]

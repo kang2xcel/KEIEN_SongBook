@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Song Book</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 18px; }
+    h1 { margin: 0 0 10px; }
+    .sub { color:#666; font-size: 13px; margin-bottom: 14px; }
+    .top { display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 12px; }
+    input { padding:10px 12px; border:1px solid #ccc; border-radius:10px; min-width: 240px; }
+    button { padding:10px 12px; border:1px solid #ccc; background:#fff; border-radius:10px; cursor:pointer; }
+    button:hover { background:#f5f5f5; }
+    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin: 10px 0 14px; }
+    .tab.active { border-color:#111; font-weight: 600; }
+    .list { display:flex; flex-direction:column; gap:10px; }
+    .card { border:1px solid #eee; border-radius:14px; padding:12px 12px; }
+    .title { font-weight:700; margin-bottom:4px; }
+    .meta { color:#555; font-size: 13px; display:flex; gap:10px; flex-wrap:wrap; }
+    .badge { font-size: 12px; border:1px solid #ddd; padding:2px 8px; border-radius:999px; color:#333; }
+    .row { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+    a { text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .muted { color:#777; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Song Book</h1>
+  <div class="sub">검색 / 장르 버튼 / 추천곡 / 랜덤 뽑기</div>
+
+  <div class="top">
+    <input id="q" placeholder="검색: 곡명/가수" />
+    <button id="btnRec">추천곡: 전체</button>
+    <button id="btnRandom">랜덤 노래</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="muted" id="count"></div>
+  <div class="list" id="list"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  let songs = [];
+  let currentGenre = "전체";
+  let recommendedOnly = false;
+
+  function uniq(arr) { return [...new Set(arr)].filter(Boolean); }
+
+  function renderTabs(genres) {
+    const tabs = $("tabs");
+    tabs.innerHTML = "";
+    const all = ["전체", ...genres];
+
+    for (const g of all) {
+      const b = document.createElement("button");
+      b.className = "tab" + (g === currentGenre ? " active" : "");
+      b.textContent = g;
+      b.onclick = () => { currentGenre = g; render(); };
+      tabs.appendChild(b);
+    }
+  }
+
+  function filteredSongs() {
+    const q = $("q").value.trim().toLowerCase();
+    return songs.filter(s => {
+      if (recommendedOnly && !s.recommended) return false;
+      if (currentGenre !== "전체" && s.genre !== currentGenre) return false;
+      if (q) {
+        const hay = `${s.title||""} ${s.artist||""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function cardHtml(s) {
+    const link = s.url ? `<a href="${s.url}" target="_blank" rel="noreferrer">링크</a>` : "";
+    const rec = s.recommended ? `<span class="badge">추천</span>` : "";
+    const genre = s.genre ? `<span class="badge">${escapeHtml(s.genre)}</span>` : "";
+    return `
+      <div class="card">
+        <div class="row">
+          <div>
+            <div class="title">${escapeHtml(s.title || "")}</div>
+            <div class="meta">
+              <span>${escapeHtml(s.artist || "")}</span>
+              ${genre}
+              ${rec}
+            </div>
+          </div>
+          <div>${link}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+
+  function render() {
+    const list = $("list");
+    const items = filteredSongs();
+    $("count").textContent = `표시 중: ${items.length}곡`;
+
+    // 탭 active 갱신
+    [...$("tabs").children].forEach(btn => {
+      btn.classList.toggle("active", btn.textContent === currentGenre);
+    });
+
+    list.innerHTML = items.map(cardHtml).join("") || `<div class="muted">조건에 맞는 노래가 없습니다.</div>`;
+  }
+
+  $("q").addEventListener("input", render);
+
+  $("btnRec").onclick = () => {
+    recommendedOnly = !recommendedOnly;
+    $("btnRec").textContent = recommendedOnly ? "추천곡: ON" : "추천곡: 전체";
+    render();
+  };
+
+  $("btnRandom").onclick = () => {
+    const items = filteredSongs();
+    if (!items.length) return alert("현재 조건에 맞는 노래가 없어요.");
+    const pick = items[Math.floor(Math.random() * items.length)];
+    alert(`랜덤 선택:\n${pick.title} - ${pick.artist}`);
+  };
+
+  // songs.json 읽기
+  fetch("./songs.json")
+    .then(r => r.json())
+    .then(data => {
+      songs = data;
+      const genres = uniq(songs.map(s => s.genre)).sort((a,b)=>a.localeCompare(b,"ko"));
+      renderTabs(genres);
+      render();
+    })
+    .catch(() => {
+      $("count").textContent = "songs.json을 불러오지 못했습니다. index.html과 같은 폴더에 있는지 확인하세요.";
+    });
+</script>
+</body>
+</html>
